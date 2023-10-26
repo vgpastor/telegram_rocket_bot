@@ -1,24 +1,30 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram.ext import CommandHandler, CallbackQueryHandler, ContextTypes, Application
+
+from src.domain.AbstractVideoService import AbstractVideoService
 
 
 class RocketLaunchBot:
-    def __init__(self, app, video_service):
+    def __init__(self, app: Application, video_service: AbstractVideoService):
         self.app = app
         self.video_service = video_service
 
-        self.video_name = "Falcon Heavy Test Flight (Hosted Webcast)-wbSwFU6tY1c"  # Por ejemplo
-        video_info = self.video_service.get_video_info(self.video_name)
-        self.left_bound = 0
-        self.right_bound = video_info.frames - 1
+        self.video_name = "Falcon Heavy Test Flight (Hosted Webcast)-wbSwFU6tY1c"
+        self.video_info = self.video_service.get_video_info(self.video_name)
+
+        self.resetData()
 
         self.app.add_handler(CommandHandler("video", self.start_bisection_search))
         self.app.add_handler(CallbackQueryHandler(self.button_callback))
 
+    def resetData(self):
+        self.left_bound = 0
+        self.right_bound = self.video_info.frames - 1
+
     async def start_bisection_search(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        # Tomamos el frame del medio para iniciar la búsqueda
+        self.resetData()
         self.current_frame = (self.left_bound + self.right_bound) // 2
-        await self.send_video_frame(update.message, context)  # Pasamos update.message aquí
+        await self.send_video_frame(update.message, context)
 
     async def send_video_frame(self, message, context: ContextTypes.DEFAULT_TYPE) -> None:
         frame = self.video_service.get_frame(self.video_name, self.current_frame)
@@ -42,5 +48,5 @@ class RocketLaunchBot:
             return
 
         self.current_frame = (self.left_bound + self.right_bound) // 2
-        await self.send_video_frame(query.message, context)  # Pasamos query.message aquí
+        await self.send_video_frame(query.message, context)
 
